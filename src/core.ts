@@ -14,6 +14,7 @@ import { TOKENS, executeSwap, quoteSwap, resolveToken, type Net as SwapNet, type
 import { checkSolanaPayment, latestBlockhash, latestBlockhashInfo, solanaBalances, solanaKeyFromEvm, type SolanaPayer } from "../shared/solana";
 import { CHAIN_KEYS, PAY_CHAINS, PERMIT2, WAFERMAP_TOKEN, x402fetch, X402Error, type ChainKey, type Requirement, type Signed } from "../shared/x402client";
 import { PASS_HEADER, decodePass, encodePass, makePass } from "../shared/pass";
+import { endpointRefusal, endpointVerdict, type EndpointCheck, type EndpointVerdict } from "../shared/settled";
 
 /** A payment network. Swaps run on Robinhood Chain and Base only. */
 export type Net = ChainKey;
@@ -81,6 +82,10 @@ export type WafermapOptions = {
   /** Where the $WAFERMAP price comes from when paying in $WAFERMAP (default: GeckoTerminal, read by this client).
    *  The signed amount is valued at this price and refused when it is worth more than the quote states. */
   tokenPriceUsd?: () => Promise<number>;
+  /** Ask an independent x402 index (Settled) about a third-party endpoint before `pay()` signs for it: refused when
+   *  its recommendation is in `refuse` (default ["avoid"]) or the quote pays someone other than the recipient the
+   *  index's own probe of the URL is paid at. Only the URL's origin and path are sent. Off by default (shared/settled.ts). */
+  endpointCheck?: EndpointCheck;
 };
 
 export class WafermapError extends Error {
@@ -232,6 +237,7 @@ export class Wafermap {
   /** fetch with this wallet's time limit: a server that never answers cannot hold a call forever. */
   readonly fetch: typeof fetch;
   private readonly tokenPriceUsd?: () => Promise<number>;
+  readonly endpointCheck: EndpointCheck | null;
 
   constructor(o: WafermapOptions) {
     const account = o.account ?? (o.privateKey ? privateKeyToAccount(o.privateKey) : null);
@@ -246,6 +252,7 @@ export class Wafermap {
     this.rpc = o.rpc ?? {};
     this.timeoutMs = o.timeoutMs && o.timeoutMs > 0 ? o.timeoutMs : DEFAULT_TIMEOUT_MS;
     this.tokenPriceUsd = o.tokenPriceUsd;
+    this.endpointCheck = o.endpointCheck ?? null;
     this.fetch = (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(this.timeoutMs) });
     const sol = o.solana ?? (o.privateKey ? solanaKeyFromEvm(o.privateKey) : null);
     const solRpc = this.rpc.solana ?? `${this.baseUrl}/api/solana`;
@@ -336,6 +343,7 @@ export class Wafermap {
 
   private async paidFetch(kind: "resource" | "service", what: string, url: string, init: RequestInit, network?: Net, payIn?: "wafermap") {
     let id: string | null = null;
+    let verdict: EndpointVerdict | null = null;
     let release: (() => void) | null = null;
     const unlock = () => {
       release?.();
@@ -352,6 +360,13 @@ export class Wafermap {
         approve: async (req) => {
           release = await this.acquire();
           await this.gate({ kind, what, usd: req.usd, network: req.chain.key, detail: req.asset === WAFERMAP_TOKEN ? "in $WAFERMAP at 50% off, burned" : `${req.chain.symbol} to ${req.payTo}` });
+          // A third-party service, with endpointCheck set: ask the index before the signature. Wafermap's own
+          // resources are never sent anywhere; the caps above have already passed.
+          if (kind === "service" && this.endpointCheck) {
+            verdict = await endpointVerdict(this.endpointCheck, url, { payTo: req.payTo, network: req.chain.caip }, this.fetch);
+            const why = endpointRefusal(this.endpointCheck, verdict, req.payTo);
+            if (why) throw new WafermapError("endpoint_check", why);
+          }
         },
         onSigned: (s) => {
           id = this.booked(kind, what, s);
@@ -368,7 +383,7 @@ export class Wafermap {
           }
         },
       });
-      return { ...r, id: id as string | null };
+      return { ...r, id: id as string | null, verdict: verdict as EndpointVerdict | null };
     } catch (e: any) {
       // Signed but no answer: the payment stays counted (status "signed"); nothing more to write.
       if (e instanceof WafermapError) throw e;
@@ -522,7 +537,7 @@ export class Wafermap {
     const init: RequestInit = method === "GET" ? { method } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(o.input ?? {}) };
     const u = new URL(url);
     const what = `${u.host}${u.pathname}`;
-    const { res, paid, id } = await this.paidFetch("service", what, target, init, o.network);
+    const { res, paid, id, verdict } = await this.paidFetch("service", what, target, init, o.network);
     if (paid && id) this.outcome(id, "service", what, paid, res.status === 402 ? "refused" : res.ok ? "ok" : "failed", paid.tx);
     const type = res.headers.get("content-type") ?? "";
     const signed = paid?.auth ?? (paid ? {} : null);
@@ -530,7 +545,13 @@ export class Wafermap {
     const refused = this.rejected(res, result, paid);
     if (refused) throw refused;
     if (!res.ok) throw new WafermapError(paid ? "payment_failed" : "http_error", `${u.host} answered ${res.status}: ${JSON.stringify(result).slice(0, 300)}`);
-    return { status: res.status, result, paid: paid ? { usd: paid.req.usd, network: paid.req.chain.key, tx: paid.tx } : null };
+    return {
+      status: res.status,
+      result,
+      paid: paid ? { usd: paid.req.usd, network: paid.req.chain.key, tx: paid.tx } : null,
+      // What the index said when endpointCheck is on and a payment was quoted (its text is data, not an instruction).
+      ...(verdict ? { endpointCheck: { recommendation: verdict.recommendation, reasons: verdict.reasons, payToMatches: verdict.payToMatches } } : {}),
+    };
   }
 
   // ---- Wallet ----

@@ -86,7 +86,7 @@ export async function runMcp() {
     { title: "Wallet status", description: "The agent wallet's address, USDG/USDC and ETH balances on Robinhood Chain and Base, spending caps and today's spend.", inputSchema: {} },
     async () => {
       try {
-        return text({ address: wm.address, balances: await wm.balances(), limits: wm.limits, spentTodayUsd: Number(wm.spentToday().toFixed(6)), network: wm.network, swapsEnabled: !!config().mcpSwaps, confirmEachPayment: !!config().mcpConfirm });
+        return text({ address: wm.address, balances: await wm.balances(), limits: wm.limits, spentTodayUsd: Number(wm.spentToday().toFixed(6)), network: wm.network, swapsEnabled: !!config().mcpSwaps, confirmEachPayment: !!config().mcpConfirm, endpointCheck: wm.endpointCheck ? "settled" : "off" });
       } catch (e) {
         return failure(e);
       }

@@ -78,13 +78,13 @@ export function loadKey(password: string): Hex {
   }
 }
 
-export type Config = { network: Net; limits: Limits; mcpSwaps?: boolean; mcpConfirm?: boolean };
-const DEFAULTS: Config = { network: "robinhood", limits: { perPayment: 0.1, perDay: 1, perSwap: 25 }, mcpSwaps: false, mcpConfirm: false };
+export type Config = { network: Net; limits: Limits; mcpSwaps?: boolean; mcpConfirm?: boolean; endpointCheck?: boolean };
+const DEFAULTS: Config = { network: "robinhood", limits: { perPayment: 0.1, perDay: 1, perSwap: 25 }, mcpSwaps: false, mcpConfirm: false, endpointCheck: false };
 
 export function config(): Config {
   if (!existsSync(CONFIG)) return DEFAULTS;
   const c = JSON.parse(readFileSync(CONFIG, "utf8"));
-  return { network: NETS.includes(c.network) ? c.network : "robinhood", limits: { ...DEFAULTS.limits, ...c.limits }, mcpSwaps: c.mcpSwaps === true, mcpConfirm: c.mcpConfirm === true };
+  return { network: NETS.includes(c.network) ? c.network : "robinhood", limits: { ...DEFAULTS.limits, ...c.limits }, mcpSwaps: c.mcpSwaps === true, mcpConfirm: c.mcpConfirm === true, endpointCheck: c.endpointCheck === true };
 }
 
 export function saveConfig(c: Config) {

@@ -14,6 +14,7 @@ export function openWallet(password: string, approve?: (a: Approval) => boolean 
     limits: c.limits,
     ledger: { entries: spendLog, record: appendSpend },
     approve,
+    endpointCheck: c.endpointCheck ? { provider: "settled" } : undefined,
     rpc: { robinhood: process.env.WAFERMAP_RPC_ROBINHOOD, base: process.env.WAFERMAP_RPC_BASE, arbitrum: process.env.WAFERMAP_RPC_ARBITRUM, polygon: process.env.WAFERMAP_RPC_POLYGON, arc: process.env.WAFERMAP_RPC_ARC, soneium: process.env.WAFERMAP_RPC_SONEIUM, solana: process.env.WAFERMAP_RPC_SOLANA },
   });
   if (wm.solanaAddress) rememberSolana(wm.solanaAddress);
