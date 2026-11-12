@@ -511,7 +511,7 @@ export class Wafermap {
     });
     const j: any = await this.body(r, () => r.json(), null, host);
     if (!r.ok || !Array.isArray(j?.services)) throw new WafermapError(j?.error?.code ?? "discovery_failed", j?.error?.message ?? "Discovery is unavailable.");
-    return j.services as { url: string; method: string; name: string | null; description: string; priceUsd: number | null; networks: string[]; payable: boolean; input: unknown; outputExample: unknown }[];
+    return j.services as { url: string; method: string; name: string | null; description: string; priceUsd: number | null; prices?: { network: string; chain: string | null; name: string; priceUsd: number | null }[]; networks: string[]; payable: boolean; input: unknown; outputExample: unknown }[];
   }
 
   /** Call any x402 URL and pay it if it asks. GET sends `input` as the query string, POST as JSON. */

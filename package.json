@@ -1,6 +1,6 @@
 {
   "name": "@wafermapxyz/cli",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "description": "Wafermap for agents: an encrypted local wallet that pays x402 resources, discovers and pays third-party x402 services (USDG on Robinhood Chain; USDC on Solana, Base, Arbitrum, Polygon, Arc, Soneium), and swaps on Robinhood Chain and Base. CLI, SDK and MCP server.",
   "type": "module",
   "bin": {

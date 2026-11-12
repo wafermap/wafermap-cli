@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.10 (12 Nov 2026)
+
+**`wafermap discover` shows the price on every network a service accepts.**
+
+- Under each result, a `pays on:` line lists each network the service takes and its price there, for example `Base $0.002 · Polygon $0.002 · Solana $0.002`. Networks this wallet cannot pay on are marked `(not supported)`. Use the network you hold funds on with `wafermap pay <url> --network <net>`.
+- SDK: `discover()` results carry `prices` (`network`, `chain`, `name`, `priceUsd`); `chain` is `null` for a network the wallet does not support. The MCP tool `wafermap_discover` returns the same field.
+- `wafermap init` ends with a link to https://wafermap.xyz/start, the first paid call step by step.
+
 ## 0.4.9 (7 Nov 2026)
 
 **`wafermap call <llm> --stream`: watch the answer arrive.**

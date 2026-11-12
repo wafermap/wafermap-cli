@@ -82,6 +82,15 @@ function die(msg: string): never {
 }
 
 /** field=value pairs (numbers stay numbers) plus an optional --json object. */
+/** The price on each network a discovered service accepts; networks this wallet cannot pay on are marked. */
+function pricesLine(prices?: { chain: string | null; name: string; priceUsd: number | null }[]): string {
+  if (!prices?.length) return "";
+  const fmt = (p: { name: string; priceUsd: number | null }) => `${p.name} ${p.priceUsd !== null ? `$${p.priceUsd}` : "—"}`;
+  const ours = prices.filter((p) => p.chain).map(fmt);
+  const other = prices.filter((p) => !p.chain).map((p) => `${fmt(p)} (not supported)`);
+  return `\n    pays on: ${[...ours, ...other].join(" · ")}`;
+}
+
 function inputOf(a: Args, from = 0): Record<string, unknown> {
   const input: Record<string, unknown> = {};
   if (typeof a.flags.json === "string") {
@@ -157,7 +166,8 @@ async function main() {
   Solana address ${sol} (derived from the same key)
   Key encrypted in ${HOME}/keystore.json. Forget the password and the key is gone: run \`wafermap export-key\` to back it up.
   Fund it with a few dollars of USDC on Solana (Solana address), or USDG on Robinhood Chain or USDC on Base, Arbitrum, Polygon, Arc or Soneium (EVM address). Payments are gasless; swaps need a little ETH.
-  Caps: $0.10 per payment, $1 per day, $25 per swap. Change with \`wafermap limits\`.`);
+  Caps: $0.10 per payment, $1 per day, $25 per swap. Change with \`wafermap limits\`.
+  New here? Your first paid call, step by step: https://wafermap.xyz/start`);
       return;
     }
 
@@ -284,7 +294,7 @@ Total $${total.toFixed(4)} in ${pays.length} payments. From 0.3.3 every payment 
       if (q.length < 2) die("Say what you are looking for: wafermap discover weather");
       const wm = openWallet(await password());
       const list = await wm.discover(q, Number(a.flags.limit ?? 10));
-      for (const s of list) console.log(`${s.payable ? "●" : "○"} ${s.priceUsd !== null ? `$${s.priceUsd}`.padEnd(8) : "—".padEnd(8)} ${s.method.padEnd(4)} ${s.url}\n    ${s.description.slice(0, 140)}${s.input ? `\n    input: ${JSON.stringify(s.input).slice(0, 140)}` : ""}`);
+      for (const s of list) console.log(`${s.payable ? "●" : "○"} ${s.priceUsd !== null ? `$${s.priceUsd}`.padEnd(8) : "—".padEnd(8)} ${s.method.padEnd(4)} ${s.url}\n    ${s.description.slice(0, 140)}${pricesLine(s.prices)}${s.input ? `\n    input: ${JSON.stringify(s.input).slice(0, 140)}` : ""}`);
       return console.log(`\n● payable with USDG (Robinhood Chain) or USDC (Solana, Base, Arbitrum, Polygon, Arc, Soneium)   ○ other networks only`);
     }
 
