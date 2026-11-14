@@ -33,6 +33,8 @@ wafermap discover weather
 wafermap pay https://x402.agentindex.world/weather city=Jakarta
 wafermap swap 0.01 ETH USDG
 wafermap history
+wafermap statement --month 2026-11 --out nov.json
+wafermap statement --verify nov.json
 ```
 
 Add `--yes` to skip the confirmation prompt (caps still apply), `--network base`, `arbitrum`, `polygon`, `arc`, `soneium` or `solana` to pay in USDC on that network (swaps run on `robinhood` or `base`). Set `WAFERMAP_PASSWORD` to avoid the password prompt in scripts.

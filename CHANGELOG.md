@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.11 (15 Nov 2026)
+
+**`wafermap statement`: a monthly statement you can check against the chains.**
+
+- `wafermap statement --month 2026-11 --out statement.json` downloads one month of this wallet's payments to Wafermap and to marketplace sellers (EVM and Solana sides together), from https://wafermap.xyz/api/statement. `--csv` gives the accounting version; without `--out` it prints the lines and the total.
+- `wafermap statement --verify statement.json` reads every transaction from its own chain, not from Wafermap: an EVM line passes only if the receipt holds a Transfer of exactly that amount of that token from the payer to the recipient; a Solana line only if the transaction succeeded and moved exactly that amount between those two owners. It also checks that the totals add up to the lines, and exits with code 2 on any mismatch, failed or missing transaction. Public RPCs by default; set `WAFERMAP_RPC_<NETWORK>` to use your own.
+- Works on statements downloaded anywhere: the Wallet page, a team owner's statement from /teams, or the API.
+- SDK: `fetchStatement`, `parseStatement`, `verifyStatement`, `verifyLine`.
+
 ## 0.4.10 (12 Nov 2026)
 
 **`wafermap discover` shows the price on every network a service accepts.**

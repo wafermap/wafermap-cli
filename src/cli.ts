@@ -18,6 +18,8 @@ Wallet
   wafermap balance                      USDG / USDC and gas on every payment network
   wafermap limits [--per-payment 0.1] [--per-day 1] [--per-swap 25] [--network <net>] [--mcp-swaps on|off] [--mcp-confirm on|off]
   wafermap history [--days 7] [--verify]  payments and swaps from this machine; --verify checks on-chain
+  wafermap statement [--month 2026-11] [--csv] [--out file]  a month of payments to Wafermap and its sellers
+  wafermap statement --verify <file.json>  check every line of a statement against the chain
   wafermap export-key [--solana]        print the private key, or the Solana key for Phantom/Solflare
   wafermap keychain [on|off]            keep the password for \`wafermap mcp\` in the OS keychain, not in plain text
 
@@ -279,6 +281,59 @@ Total $${total.toFixed(4)} in ${pays.length} payments. From 0.3.3 every payment 
         const cancelled = rows.filter((e, i) => e.kind !== "swap" && chain[i] === "cancelled").reduce((s, e) => s + e.usd, 0);
         console.log(`On-chain: $${never.toFixed(4)} of that was signed but never executed and has expired${cancelled ? `, and $${cancelled.toFixed(4)} was cancelled by this wallet before it executed` : ""}. "used" = the token contract logged the transfer (AuthorizationUsed); "cancelled" = the nonce is spent but never executed (cancelAuthorization); "unknown" = an older log line with nothing to check by; "error" = the RPC did not answer, try again (Base's public RPC refuses log searches: for a payment with no transaction on record, set WAFERMAP_RPC_BASE to your own RPC).`);
       } else console.log("Add --verify to check on-chain which signed payments were executed.");
+      return;
+    }
+
+    case "statement": {
+      const { fetchStatement, parseStatement, verifyStatement } = await import("./statement.js");
+      const { readFileSync, writeFileSync } = await import("node:fs");
+      if (a.flags.verify !== undefined) {
+        const file = typeof a.flags.verify === "string" ? a.flags.verify : a._[0];
+        if (!file) die("Which file? wafermap statement --verify wafermap-statement-2026-11.json");
+        let text: string;
+        try {
+          text = readFileSync(file, "utf8");
+        } catch {
+          die(`Cannot read ${file}.`);
+        }
+        let st;
+        try {
+          st = parseStatement(text);
+        } catch (e: any) {
+          die(e.message);
+        }
+        console.error(`Checking ${st.lines.length} payments from ${st.month} on-chain…`);
+        const r = await verifyStatement(st);
+        st.lines.forEach((l, i) => {
+          if (r.results[i] !== "ok") console.log(`${r.results[i].toUpperCase().padEnd(11)} ${l.date.slice(0, 16).replace("T", " ")}  $${l.amountUsd.padEnd(8)} ${l.resource}  ${l.explorer ?? l.tx}`);
+        });
+        console.log(`\n${r.ok} of ${r.lines} payments confirmed on-chain, $${r.confirmedUsd} of $${r.linesUsd}.${r.totalsMatch ? " The totals match the lines." : " The totals block does NOT match the lines."}${st.truncated ? " This statement was cut at 10,000 lines." : ""}`);
+        if (r.ok !== r.lines)
+          console.log(`ok = the transaction moved exactly that amount from the payer to the recipient · mismatch = it did not · failed = the transaction reverted · not_found = no such transaction · error = the RPC did not answer, try again (set WAFERMAP_RPC_<NETWORK> to your own RPC) · unsupported = a network this CLI cannot read.`);
+        if (r.mismatch || r.failed || r.notFound || !r.totalsMatch) process.exitCode = 2;
+        return;
+      }
+      const evm = keystoreAddress() ?? die("No wallet yet. Run `wafermap init`, or check a downloaded file with --verify.");
+      const wallets = [evm, ...(keystoreSolana() ? [keystoreSolana()!] : [])];
+      const month = typeof a.flags.month === "string" ? a.flags.month : new Date().toISOString().slice(0, 7);
+      if (!/^20\d\d-(0[1-9]|1[0-2])$/.test(month)) die("--month must be YYYY-MM, for example 2026-11.");
+      const csv = a.flags.csv === true;
+      const out = await fetchStatement(wallets, month, { baseUrl: process.env.WAFERMAP_URL, csv, timeoutMs: Number(process.env.WAFERMAP_TIMEOUT_MS) || undefined });
+      const file = typeof a.flags.out === "string" ? a.flags.out : null;
+      if (typeof out === "string") {
+        if (file) writeFileSync(file, out);
+        else process.stdout.write(out);
+        if (file) console.error(`Saved ${file}.`);
+        return;
+      }
+      if (file) {
+        writeFileSync(file, JSON.stringify(out, null, 2) + "\n");
+        console.error(`Saved ${file}. Check it any time with: wafermap statement --verify ${file}`);
+      }
+      if (!file || a.flags.print !== undefined) {
+        for (const l of out.lines) console.log(`${l.date.slice(0, 16).replace("T", " ")}  $${l.amountUsd.padEnd(8)} ${l.network.padEnd(14).slice(0, 14)}  ${l.resource}  ${l.explorer ?? l.tx}`);
+        console.log(`\n${month}: ${out.totals.calls} paid calls, $${out.totals.usd}.${out.lines.length ? " Save it with --out statement.json, then check it with --verify." : ""}`);
+      }
       return;
     }
 

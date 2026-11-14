@@ -7,3 +7,5 @@ export { quoteSwap, executeSwap, decodeSwap, KYBER_ROUTER, SwapError } from "../
 export type { Requirement, Quote, Signed, SignedAuth, SignedSol, Signer } from "../shared/x402client";
 export { checkSolanaPayment, SOLANA_PUBLIC_RPC } from "../shared/solana";
 export type { SolanaCheck } from "../shared/solana";
+export { fetchStatement, parseStatement, verifyStatement, verifyLine } from "./statement.js";
+export type { Statement, StatementLine, LineCheck } from "./statement.js";
