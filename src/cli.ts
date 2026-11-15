@@ -27,6 +27,7 @@ Pay
   wafermap resources [words]            Wafermap's pay-per-call catalog
   wafermap call <id> [field=value ...]  run a resource and pay its price  (--json '{...}' for complex input)
   wafermap call <id> ... --pay wafermap pay a Wafermap resource in $WAFERMAP at 50% off (the tokens are burned)
+  wafermap call <llm> ... --metered      pay only the tokens used, up to a ceiling you sign (USDC on base, arbitrum, polygon)
   wafermap call <llm> ... --stream       print the answer as it arrives; you pay only once the model finishes
   wafermap approve-wafermap             one-time approval so the wallet can pay in $WAFERMAP (Robinhood Chain, ETH gas)
   wafermap holder                       what this wallet's $WAFERMAP unlocks: holder price, Pro free calls left today
@@ -51,7 +52,7 @@ function parse(argv: string[]): Args {
     if (a.startsWith("--")) {
       const [k, v] = a.slice(2).split("=", 2);
       if (v !== undefined) out.flags[k] = v;
-      else if (argv[i + 1] && !argv[i + 1].startsWith("--") && !["yes", "post", "import", "stream"].includes(k)) out.flags[k] = argv[++i];
+      else if (argv[i + 1] && !argv[i + 1].startsWith("--") && !["yes", "post", "import", "stream", "metered"].includes(k)) out.flags[k] = argv[++i];
       else out.flags[k] = true;
     } else out._.push(a);
   }
@@ -360,9 +361,11 @@ Total $${total.toFixed(4)} in ${pays.length} payments. From 0.3.3 every payment 
       // --stream prints an LLM's answer as it arrives; the payment settles only after the last piece.
       let streamed = false;
       const onDelta = a.flags.stream === true ? (t: string) => ((streamed = true), process.stdout.write(t)) : undefined;
-      const out = await wm.call(id, inputOf(a, 1), { network: net(a.flags.network), payIn, onDelta });
+      const metered = a.flags.metered === true;
+      const out = await wm.call(id, inputOf(a, 1), { network: net(a.flags.network), payIn, onDelta, metered });
       if (streamed) process.stdout.write("\n");
       if (out.receipt?.asset === "WAFERMAP") console.error(`✓ Paid ${out.receipt.amountTokens} $WAFERMAP (≈ $${out.receipt.amountUsd}), burned · ${EXPLORER(out.receipt.network)}/tx/${out.receipt.tx}`);
+      else if (out.receipt?.metered) console.error(`✓ Paid $${out.receipt.amountUsd} ${out.receipt.asset} for ${out.receipt.metered.inputTokens} in + ${out.receipt.metered.outputTokens} out tokens${out.receipt.metered.estimated ? " (estimated)" : ""}, signed up to $${out.receipt.metered.ceilingUsd} · ${EXPLORER(out.receipt.network)}/tx/${out.receipt.tx}`);
       else if (out.receipt) console.error(`✓ Paid $${out.receipt.amountUsd} ${out.receipt.asset} · ${EXPLORER(out.receipt.network)}/tx/${out.receipt.tx}`);
       else if (out.free) console.error(`✓ Free call ($WAFERMAP Pro) · ${out.free.left} of ${out.free.perDay} left today. Nothing was paid.`);
       if (typeof a.flags.out === "string") await saveMedia(out.result, a.flags.out);

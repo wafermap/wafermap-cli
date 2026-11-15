@@ -12,7 +12,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { arbitrum, arc, base, polygon, robinhood, soneium } from "viem/chains";
 import { TOKENS, executeSwap, quoteSwap, resolveToken, type Net as SwapNet, type SwapQuote, type Token } from "../shared/swap";
 import { checkSolanaPayment, latestBlockhash, latestBlockhashInfo, solanaBalances, solanaKeyFromEvm, type SolanaPayer } from "../shared/solana";
-import { CHAIN_KEYS, PAY_CHAINS, PERMIT2, WAFERMAP_TOKEN, x402fetch, X402Error, type ChainKey, type Requirement, type Signed } from "../shared/x402client";
+import { CHAIN_KEYS, PAY_CHAINS, PERMIT2, WAFERMAP_TOKEN, x402fetch, X402Error, type ChainKey, type ChainReader, type Requirement, type Signed } from "../shared/x402client";
 import { PASS_HEADER, decodePass, encodePass, makePass } from "../shared/pass";
 
 /** A payment network. Swaps run on Robinhood Chain and Base only. */
@@ -334,7 +334,16 @@ export class Wafermap {
     return prev.then(() => release);
   }
 
-  private async paidFetch(kind: "resource" | "service", what: string, url: string, init: RequestInit, network?: Net, payIn?: "wafermap") {
+  /** Chain reads for a metered payment's EIP-2612 permit: Permit2 allowance and the token's permit nonce. */
+  private reader(): ChainReader {
+    const nonces = [{ type: "function", name: "nonces", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ type: "uint256" }] }] as const;
+    return {
+      allowance: (chain, owner, token) => this.client(chain.key as EvmNet).readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [owner, PERMIT2 as `0x${string}`] }) as Promise<bigint>,
+      permitNonce: (chain, owner, token) => this.client(chain.key as EvmNet).readContract({ address: token, abi: nonces, functionName: "nonces", args: [owner] }) as Promise<bigint>,
+    };
+  }
+
+  private async paidFetch(kind: "resource" | "service", what: string, url: string, init: RequestInit, network?: Net, payIn?: "wafermap", meter?: boolean) {
     let id: string | null = null;
     let release: (() => void) | null = null;
     const unlock = () => {
@@ -348,10 +357,12 @@ export class Wafermap {
         prefer: this.prefer(network),
         fetch: this.fetch,
         payIn,
+        meter,
+        reader: meter ? this.reader() : undefined,
         tokenPriceUsd: this.tokenPriceUsd,
         approve: async (req) => {
           release = await this.acquire();
-          await this.gate({ kind, what, usd: req.usd, network: req.chain.key, detail: req.asset === WAFERMAP_TOKEN ? "in $WAFERMAP at 50% off, burned" : `${req.chain.symbol} to ${req.payTo}` });
+          await this.gate({ kind, what, usd: req.usd, network: req.chain.key, detail: req.asset === WAFERMAP_TOKEN ? "in $WAFERMAP at 50% off, burned" : meter ? `at most ${req.chain.symbol} ${req.usd}, charged for the tokens used, to ${req.payTo}` : `${req.chain.symbol} to ${req.payTo}` });
         },
         onSigned: (s) => {
           id = this.booked(kind, what, s);
@@ -451,8 +462,9 @@ export class Wafermap {
     return { receipt, done, error };
   }
 
-  async call(id: string, input: Record<string, unknown> = {}, o: { network?: Net; payIn?: "stablecoin" | "wafermap"; onDelta?: (text: string) => void } = {}) {
+  async call(id: string, input: Record<string, unknown> = {}, o: { network?: Net; payIn?: "stablecoin" | "wafermap"; onDelta?: (text: string) => void; metered?: boolean } = {}) {
     const inToken = o.payIn === "wafermap";
+    if (o.metered && inToken) throw new WafermapError("bad_options", "A metered call is paid in USDC; it cannot also be paid in $WAFERMAP.");
     // LLMs stream when asked (Accept: text/event-stream); the server settles only after the last piece. Free calls
     // and $WAFERMAP payments still answer in one JSON body, so both shapes are read below.
     const stream = !!o.onDelta && !inToken;
@@ -462,7 +474,7 @@ export class Wafermap {
     // a Pro holder's free calls apply (no payment is signed then). Both go to Wafermap only, never to third-party
     // services or marketplace sellers; the server checks the balance again itself.
     const pass = id.startsWith("m/") ? null : await this.holderPass();
-    const go = () => this.paidFetch("resource", id, `${this.baseUrl}/v1/${id}`, { method: "POST", headers: { "content-type": "application/json", "x-wafermap-payer": this.address, ...(stream ? { accept: "text/event-stream" } : {}), ...(pass ? { [PASS_HEADER]: pass } : {}) }, body: JSON.stringify(input) }, o.network, inToken ? "wafermap" : undefined);
+    const go = () => this.paidFetch("resource", id, `${this.baseUrl}/v1/${id}`, { method: "POST", headers: { "content-type": "application/json", "x-wafermap-payer": this.address, ...(stream ? { accept: "text/event-stream" } : {}), ...(pass ? { [PASS_HEADER]: pass } : {}) }, body: JSON.stringify(input) }, o.network, inToken ? "wafermap" : undefined, o.metered);
     const settle = (r: Awaited<ReturnType<typeof go>>, out: any) => {
       if (!r.paid || !r.id) return;
       const status: PaymentStatus = r.res.status === 402 ? "refused" : r.res.ok && !out?.streamError ? "ok" : "failed";
@@ -499,7 +511,7 @@ export class Wafermap {
     if (refused) throw refused;
     if (out?.streamError) throw new WafermapError(out.streamError.code ?? "stream_failed", out.streamError.message ?? "The answer did not finish. You were not charged.");
     if (!res.ok) throw new WafermapError(out?.error?.code ?? "http_error", out?.error?.message ?? (typeof out?.error === "string" ? out.error : `HTTP ${res.status}`));
-    return out as { resource: string; result: any; receipt: { network: string; asset: string; amountUsd: number; amountTokens?: number; burned?: boolean; payer: string; tx: string; ms: number } | null; free?: { wallet: string; left: number; perDay: number } };
+    return out as { resource: string; result: any; receipt: { network: string; asset: string; amountUsd: number; amountTokens?: number; burned?: boolean; payer: string; tx: string; ms: number; metered?: { inputTokens: number; outputTokens: number; estimated: boolean; ceilingUsd: number; chargedUsd: number } } | null; free?: { wallet: string; left: number; perDay: number } };
   }
 
   // ---- Third-party x402 services ----

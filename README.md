@@ -86,6 +86,8 @@ Pass `approve: (a) => boolean` to confirm each payment or swap yourself, and `le
 
 A wallet that holds at least 100,000 $WAFERMAP on Robinhood Chain pays 50% less for Wafermap's own resources when it pays on an EVM network (Robinhood Chain, Base, Arbitrum, Polygon, Arc, Soneium). Nothing to set up: `wafermap call` names the wallet to Wafermap and the quote comes back discounted; the server re-checks the balance of the wallet that signs. Marketplace listings and Solana payments keep the regular price. Check a wallet: https://wafermap.xyz/api/holder?address=0x…, or run `wafermap holder`.
 
+LLM resources can also be **metered**: `wafermap call llama-4-scout prompt="hi" --metered --network base` signs a ceiling (shown before you confirm) and pays only the tokens the model used, at least $0.001, in USDC on Base, Arbitrum or Polygon. No gas needed. Caps count the ceiling. Details: https://wafermap.xyz/docs#metered
+
 LLM resources can **stream**: `wafermap call gemma-4 prompt="hi" --stream` prints the answer as it arrives, and the payment settles only once the model finishes.
 
 Wafermap's own resources can also be **paid in $WAFERMAP at 50% off, and the tokens are burned**: `wafermap approve-wafermap` once (a Permit2 approval, one Robinhood Chain transaction), then `wafermap call <id> --pay wafermap`. Each payment is a Permit2 signature for one exact amount, usable for two minutes only by Wafermap's relayer (fixed in the client), checked against a market price the client reads itself.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.12 (16 Nov 2026)
+
+**`wafermap call <llm> --metered`: pay only the tokens the model used.**
+
+- Signs one ceiling (x402 scheme `upto`, a Permit2 transfer of at most that much) instead of the flat price. After the model finishes, Wafermap settles only the input and output tokens it reported, never more than the ceiling and never less than $0.001. The confirmation shows the ceiling; the receipt line shows the token counts, what was charged and what was signed.
+- USDC on `base`, `arbitrum` or `polygon` (pick one with `--network`). A wallet that never approved Permit2 for USDC signs an EIP-2612 permit with the payment, so no gas and no extra transaction is needed.
+- The signature can only be spent by the x402 upto proxy (its address is fixed in the client), only to the quote's recipient and only through the facilitator named in the quote, and it expires after at most 5 minutes. Spending caps count the full ceiling, because that is what was signed.
+- Works with `--stream`. Cannot be combined with `--pay wafermap`.
+- SDK: `call(id, input, { metered: true })`; the receipt carries `metered` (`inputTokens`, `outputTokens`, `estimated`, `ceilingUsd`, `chargedUsd`). MCP: `wafermap_call` takes `metered`.
+
 ## 0.4.11 (15 Nov 2026)
 
 **`wafermap statement`: a monthly statement you can check against the chains.**

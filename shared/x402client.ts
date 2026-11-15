@@ -47,9 +47,84 @@ export type Requirement = {
   extra: { name?: string; version?: string; feePayer?: string; memo?: string };
   /** The requirement exactly as the server sent it (echoed back in the payment). */
   raw: any;
+  /** Metered quotes only: the server announced eip2612GasSponsoring, so a missing Permit2 approval can be signed. */
+  gasless?: boolean;
 };
 
-export type Quote = { version: 1 | 2; resource: any; accepts: Requirement[]; offered: string[]; inputError?: { code: string; message: string }; token?: TokenRequirement };
+export type Quote = { version: 1 | 2; resource: any; accepts: Requirement[]; offered: string[]; inputError?: { code: string; message: string }; token?: TokenRequirement; metered?: Requirement[]; meterInfo?: MeterInfo };
+
+// ---- Metered calls (x402 scheme "upto", Permit2 through the x402 upto proxy) ----
+// The client signs a Permit2 transfer of at most the quoted ceiling. Only the x402 upto proxy (fixed here, never
+// taken from the server) can spend it, only to the quote's payTo, and only when called by the facilitator named in
+// the quote; the server then settles what the call used. Caps count the full ceiling, because that is what was
+// signed. When the wallet has not approved Permit2 for the token, an EIP-2612 permit for exactly the ceiling rides
+// along (extension eip2612GasSponsoring), so no gas is needed.
+export const UPTO_PROXY = "0x4020A4f3b7b90ccA423B9fabCc0CE57C6C240002";
+/** The longest a metered authorization stays valid: long answers settle after the model finishes. */
+export const MAX_METERED_SECONDS = 300;
+export type MeterInfo = { inputPer1kTokensUsd: number; outputPer1kTokensUsd: number; ceilingUsd: number; minimumUsd: number };
+/** Reads the client needs for an EIP-2612 permit: the owner's Permit2 allowance and its permit nonce on the token. */
+export type ChainReader = { allowance: (chain: Chain, owner: Hex, token: Hex) => Promise<bigint>; permitNonce: (chain: Chain, owner: Hex, token: Hex) => Promise<bigint> };
+const UPTO_TYPES = {
+  PermitWitnessTransferFrom: [
+    { name: "permitted", type: "TokenPermissions" },
+    { name: "spender", type: "address" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+    { name: "witness", type: "Witness" },
+  ],
+  TokenPermissions: [
+    { name: "token", type: "address" },
+    { name: "amount", type: "uint256" },
+  ],
+  Witness: [
+    { name: "to", type: "address" },
+    { name: "facilitator", type: "address" },
+    { name: "validAfter", type: "uint256" },
+  ],
+} as const;
+const EIP2612_TYPES = {
+  Permit: [
+    { name: "owner", type: "address" },
+    { name: "spender", type: "address" },
+    { name: "value", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+  ],
+} as const;
+
+/** Signs a metered payment for at most `req.amount` (the ceiling). Adds an EIP-2612 permit when the Permit2
+ *  allowance is short and the server announced eip2612GasSponsoring. */
+export async function signUptoPayment(signer: Signer, req: Requirement, resource: any, opts: { reader?: ChainReader; gasless?: boolean } = {}): Promise<{ name: string; value: string; deadline: number }> {
+  const fac = String(req.raw?.extra?.facilitatorAddress ?? "");
+  if (!/^0x[0-9a-fA-F]{40}$/.test(fac)) throw new X402Error("bad_quote", "The metered quote names no facilitator. Nothing was signed.");
+  const nonce = BigInt(randomNonce()) >> 8n;
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + Math.min(req.maxTimeoutSeconds, MAX_METERED_SECONDS));
+  const max = BigInt(req.amount);
+  const witness = { to: req.payTo as Hex, facilitator: fac as Hex, validAfter: 0n };
+  let signature: Hex;
+  try {
+    signature = await signer.signTypedData({ domain: { name: "Permit2", chainId: req.chain.id, verifyingContract: PERMIT2 as Hex }, types: UPTO_TYPES, primaryType: "PermitWitnessTransferFrom", message: { permitted: { token: req.asset as Hex, amount: max }, spender: UPTO_PROXY as Hex, nonce, deadline, witness } });
+  } catch (e: any) {
+    throw new X402Error("sign_rejected", e?.shortMessage ?? e?.message ?? "Signature rejected.");
+  }
+  let extensions: Record<string, unknown> | undefined;
+  if (opts.gasless && opts.reader) {
+    const allowance = await opts.reader.allowance(req.chain, signer.address, req.asset as Hex).catch(() => 0n);
+    if (allowance < max) {
+      const pn = await opts.reader.permitNonce(req.chain, signer.address, req.asset as Hex);
+      let ps: Hex;
+      try {
+        ps = await signer.signTypedData({ domain: { name: req.extra.name, version: req.extra.version, chainId: req.chain.id, verifyingContract: req.asset as Hex }, types: EIP2612_TYPES, primaryType: "Permit", message: { owner: signer.address, spender: PERMIT2 as Hex, value: max, nonce: pn, deadline } });
+      } catch (e: any) {
+        throw new X402Error("sign_rejected", e?.shortMessage ?? e?.message ?? "Signature rejected.");
+      }
+      extensions = { eip2612GasSponsoring: { info: { from: signer.address, asset: req.asset, spender: PERMIT2, amount: max.toString(), nonce: pn.toString(), deadline: deadline.toString(), signature: ps, version: "1" } } };
+    }
+  }
+  const permit2Authorization = { from: signer.address, permitted: { token: req.asset, amount: req.amount }, spender: UPTO_PROXY, nonce: nonce.toString(), deadline: deadline.toString(), witness: { to: req.payTo, facilitator: fac, validAfter: "0" } };
+  return { name: "PAYMENT-SIGNATURE", value: b64encode(JSON.stringify({ x402Version: 2, resource, accepted: req.raw, payload: { signature, permit2Authorization }, ...(extensions ? { extensions } : {}) })), deadline: Number(deadline) };
+}
 
 // ---- Paying Wafermap in $WAFERMAP (Permit2, burned) ----
 // A Permit2 PermitTransferFrom lets its spender send the tokens anywhere, so the client trusts the quote for nothing
@@ -156,10 +231,17 @@ export async function readQuote(res: Response): Promise<Quote> {
   const accepts: Requirement[] = [];
   const offered: string[] = [];
   let token: TokenRequirement | undefined;
+  const metered: Requirement[] = [];
   for (const r of body.accepts) {
     offered.push(`${r.scheme ?? "?"}/${r.network ?? "?"}`);
     if (r?.scheme === TOKEN_SCHEME) {
       token ??= tokenOption(r);
+      continue;
+    }
+    if (r?.scheme === "upto" && version === 2) {
+      const ch = chainOf(r.network);
+      if (ch && ch.vm === "evm" && String(r.asset ?? "").toLowerCase() === ch.stable.toLowerCase() && /^\d+$/.test(String(r.amount)) && /^0x[0-9a-fA-F]{40}$/.test(String(r.extra?.facilitatorAddress ?? "")) && /^0x[0-9a-fA-F]{40}$/.test(String(r.payTo ?? "")))
+        metered.push({ version, chain: ch, amount: String(r.amount), usd: Number(r.amount) / 1e6, payTo: r.payTo, asset: r.asset, maxTimeoutSeconds: Number(r.maxTimeoutSeconds) || 120, extra: r.extra?.name && r.extra?.version ? { name: String(r.extra.name), version: String(r.extra.version) } : ch.domain!, raw: r });
       continue;
     }
     const chain = chainOf(r.network);
@@ -175,7 +257,10 @@ export async function readQuote(res: Response): Promise<Quote> {
     accepts.push({ version, chain, amount, usd: Number(amount) / 1e6, payTo: r.payTo, asset: r.asset, maxTimeoutSeconds: Number(r.maxTimeoutSeconds) || 120, extra, raw: r });
   }
   const inputError = body.inputError?.message ? { code: String(body.inputError.code ?? "invalid_input"), message: String(body.inputError.message) } : undefined;
-  return { version, resource: body.resource ?? null, accepts, offered, inputError, ...(token ? { token } : {}) };
+  const m = body.metered;
+  const meterInfo = m && Number.isFinite(Number(m.ceilingUsd)) ? { inputPer1kTokensUsd: Number(m.inputPer1kTokensUsd), outputPer1kTokensUsd: Number(m.outputPer1kTokensUsd), ceilingUsd: Number(m.ceilingUsd), minimumUsd: Number(m.minimumUsd) } : undefined;
+  const gasless = !!body.extensions?.eip2612GasSponsoring;
+  return { version, resource: body.resource ?? null, accepts, offered, inputError, ...(token ? { token } : {}), ...(metered.length ? { metered: metered.map((q) => ({ ...q, gasless })) } : {}), ...(meterInfo ? { meterInfo } : {}) };
 }
 
 /** Pick the requirement to pay: the first preferred chain that is offered. */
@@ -256,7 +341,7 @@ export type SignedAuth = { nonce: Hex; validBefore: number };
 /** What a Solana payment can be found by on-chain later (see checkSolanaPayment): our signature, its
  *  memo, its blockhash and the slot that blockhash was read at. */
 export type SignedSol = { sig: string; memo: string; blockhash: string; slot?: number };
-export type Signed = { req: Requirement; from: string; auth?: SignedAuth; sol?: SignedSol; token?: { amount: string } };
+export type Signed = { req: Requirement; from: string; metered?: { ceiling: string; deadline: number }; auth?: SignedAuth; sol?: SignedSol; token?: { amount: string } };
 export type PaidCall = { res: Response; paid: (Signed & { tx: string | null }) | null };
 
 /**
@@ -269,7 +354,7 @@ export type PaidCall = { res: Response; paid: (Signed & { tx: string | null }) |
 export async function x402fetch(
   url: string,
   init: RequestInit,
-  opts: { signer: Signer | (() => Promise<Signer>); solana?: SolanaPayer; prefer?: ChainKey[]; approve?: (req: Requirement) => Promise<void> | void; onSigned?: (s: Signed) => void; fetch?: typeof fetch; payIn?: "stablecoin" | "wafermap"; tokenPriceUsd?: () => Promise<number> },
+  opts: { signer: Signer | (() => Promise<Signer>); solana?: SolanaPayer; prefer?: ChainKey[]; approve?: (req: Requirement) => Promise<void> | void; onSigned?: (s: Signed) => void; fetch?: typeof fetch; payIn?: "stablecoin" | "wafermap"; tokenPriceUsd?: () => Promise<number>; meter?: boolean; reader?: ChainReader },
 ): Promise<PaidCall> {
   const f = opts.fetch ?? fetch;
   const first = await f(url, init);
@@ -290,6 +375,21 @@ export async function x402fetch(
     const signer = typeof opts.signer === "function" ? await opts.signer() : opts.signer;
     const header = await signTokenPayment(signer, t, quote.resource);
     const signed: Signed = { req, from: signer.address, token: { amount: t.amount } };
+    opts.onSigned?.(signed);
+    const headers = new Headers(init.headers);
+    headers.set(header.name, header.value);
+    const res = await f(url, { ...init, headers });
+    return { res, paid: { ...signed, tx: readSettlement(res)?.tx ?? null } };
+  }
+  if (opts.meter) {
+    // Metered: pay the tokens used, up to the quoted ceiling, on a network the server meters on.
+    const pref = (opts.prefer ?? CHAIN_KEYS).filter((k) => k !== "solana");
+    const req = pref.map((k) => quote.metered?.find((q) => q.chain.key === k)).find(Boolean);
+    if (!req) throw new X402Error("metered_not_offered", quote.metered?.length ? `Metered calls are offered on ${quote.metered.map((q) => q.chain.name).join(", ")}; pick one of those networks.` : "This call is not offered as a metered (pay per token) call. Pay the flat price instead.");
+    if (opts.approve) await opts.approve(req);
+    const signer = typeof opts.signer === "function" ? await opts.signer() : opts.signer;
+    const header = await signUptoPayment(signer, req, quote.resource, { reader: opts.reader, gasless: !!req.gasless });
+    const signed: Signed = { req, from: signer.address, metered: { ceiling: req.amount, deadline: header.deadline } };
     opts.onSigned?.(signed);
     const headers = new Headers(init.headers);
     headers.set(header.name, header.value);

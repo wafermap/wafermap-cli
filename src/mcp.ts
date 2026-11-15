@@ -121,11 +121,12 @@ export async function runMcp() {
         input: z.record(z.string(), z.any()).optional().describe("Input fields for the resource."),
         network: NET,
         payIn: z.enum(["stablecoin", "wafermap"]).optional().describe("wafermap: pay Wafermap's own resources in $WAFERMAP at 50% off (the tokens are burned; needs `wafermap approve-wafermap` once). Default: USDG/USDC."),
+        metered: z.boolean().optional().describe("LLM resources only: sign a ceiling and pay only the tokens the model used (USDC on base, arbitrum or polygon; no gas needed). Caps count the ceiling."),
       },
     },
-    async ({ resource, input, network, payIn }) => {
+    async ({ resource, input, network, payIn, metered }) => {
       try {
-        return result(await wm.call(resource, input ?? {}, { network, payIn }));
+        return result(await wm.call(resource, input ?? {}, { network, payIn, metered }));
       } catch (e) {
         return failure(e);
       }
