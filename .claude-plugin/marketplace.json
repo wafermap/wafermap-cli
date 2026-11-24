@@ -1,0 +1,21 @@
+{
+  "name": "wafermap",
+  "owner": { "name": "Wafermap", "email": "hello@wafermap.xyz" },
+  "metadata": {
+    "description": "Wafermap for Claude Code: an x402 wallet that pays per call for LLMs, image and audio models, web reading, on-chain data, tokenized stocks and prediction markets."
+  },
+  "plugins": [
+    {
+      "name": "wafermap",
+      "source": "./plugin",
+      "description": "Give Claude an x402 wallet with spending caps: find and pay Wafermap's pay-per-call resources and third-party x402 services, with a receipt and a transaction for every payment.",
+      "version": "0.1.0",
+      "author": { "name": "Wafermap", "email": "hello@wafermap.xyz" },
+      "homepage": "https://wafermap.xyz/docs#claude-code",
+      "repository": "https://github.com/wafermap/wafermap-cli",
+      "license": "MIT",
+      "keywords": ["x402", "payments", "mcp", "agents", "usdc", "robinhood-chain", "base", "solana"],
+      "category": "productivity"
+    }
+  ]
+}

@@ -1,5 +1,10 @@
 # Changelog
 
+## Claude Code plugin (24 Nov 2026)
+
+- This repository is now a Claude Code plugin marketplace: `/plugin marketplace add wafermap/wafermap-cli`, then `/plugin install wafermap@wafermap`.
+- The plugin bundles the remote catalog (`https://wafermap.xyz/mcp`, no setup) and the local wallet server (`npx -y @wafermapxyz/cli@0.4 mcp`), plus a skill and `/wafermap:setup`. The CLI itself is unchanged (still 0.4.12).
+
 ## 0.4.12 (16 Nov 2026)
 
 **`wafermap call <llm> --metered`: pay only the tokens the model used.**

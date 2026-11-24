@@ -39,6 +39,20 @@ wafermap statement --verify nov.json
 
 Add `--yes` to skip the confirmation prompt (caps still apply), `--network base`, `arbitrum`, `polygon`, `arc`, `soneium` or `solana` to pay in USDC on that network (swaps run on `robinhood` or `base`). Set `WAFERMAP_PASSWORD` to avoid the password prompt in scripts.
 
+## Claude Code plugin
+
+```
+/plugin marketplace add wafermap/wafermap-cli
+/plugin install wafermap@wafermap
+```
+
+The plugin adds two MCP servers and a skill:
+- `wafermap-catalog`: the remote catalog at https://wafermap.xyz/mcp. It browses resources and input schemas, works without setup, and cannot pay.
+- `wafermap`: this CLI's MCP server (`npx -y @wafermapxyz/cli@0.4 mcp`), which is the wallet.
+- A skill that tells Claude to check prices first and report the transaction of every payment.
+
+Set the wallet up once in a terminal (`init`, `keychain on`, `limits`, then fund the address; see [Install](#install)), then reconnect `wafermap` with `/mcp`. `/wafermap:setup` checks each step without touching the password. The plugin files are in [`plugin/`](plugin); the marketplace is [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json).
+
 ## MCP server
 
 Give Claude Desktop, Cursor or any MCP client the same wallet. First put the wallet password in your operating system's keychain, once, in a terminal:

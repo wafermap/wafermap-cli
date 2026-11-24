@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "wafermap": {
+      "command": "npx",
+      "args": ["-y", "@wafermapxyz/cli@0.4", "mcp"]
+    },
+    "wafermap-catalog": {
+      "type": "http",
+      "url": "https://wafermap.xyz/mcp"
+    }
+  }
+}
