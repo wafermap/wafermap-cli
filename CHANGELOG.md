@@ -1,5 +1,9 @@
 # Changelog
 
+## Codex plugin (24 Nov 2026)
+
+- The plugin also installs in Codex: `codex plugin marketplace add wafermap/wafermap-cli`, then `codex plugin add wafermap@wafermap`. It adds the same catalog, wallet server and skill. Plugin 0.1.1; the CLI is unchanged.
+
 ## Claude Code plugin (24 Nov 2026)
 
 - This repository is now a Claude Code plugin marketplace: `/plugin marketplace add wafermap/wafermap-cli`, then `/plugin install wafermap@wafermap`.

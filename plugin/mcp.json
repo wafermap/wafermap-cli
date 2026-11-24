@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "wafermap": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@wafermapxyz/cli@0.4", "mcp"]
+    },
+    "wafermap-catalog": {
+      "type": "streamable-http",
+      "url": "https://wafermap.xyz/mcp"
+    }
+  }
+}

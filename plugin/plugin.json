@@ -1,0 +1,31 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "wafermap",
+  "version": "0.1.1",
+  "description": "Give your agent an x402 wallet with spending caps: find and pay Wafermap's pay-per-call resources (LLMs, image and audio models, web reading, on-chain data, tokenized stocks, prediction markets) and third-party x402 services, with a receipt and a transaction for every payment. The key and the caps stay on your machine.",
+  "author": {
+    "name": "Wafermap",
+    "url": "https://wafermap.xyz"
+  },
+  "homepage": "https://wafermap.xyz/docs#codex",
+  "repository": "https://github.com/wafermap/wafermap-cli",
+  "license": "MIT",
+  "keywords": ["x402", "payments", "mcp", "ai-agents", "usdc", "usdg", "robinhood-chain", "base", "solana"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Wafermap",
+        "shortDescription": "An x402 wallet for your agent, with caps you set",
+        "longDescription": "Give your agent an x402 wallet with spending caps: find and pay Wafermap's pay-per-call resources (LLMs, image and audio models, web reading, on-chain data, tokenized stocks, prediction markets) and third-party x402 services, with a receipt and a transaction for every payment. The key and the caps stay on your machine.",
+        "developerName": "Wafermap",
+        "category": "Finance",
+        "capabilities": ["Read", "Write"],
+        "websiteURL": "https://wafermap.xyz",
+        "defaultPrompt": "Check my Wafermap wallet, then show me what gas costs on Robinhood Chain right now and what that call would cost.",
+        "brandColor": "#5fe3b4",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/logo.png"
+      }
+    }
+  }
+}

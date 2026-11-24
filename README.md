@@ -53,6 +53,15 @@ The plugin adds two MCP servers and a skill:
 
 Set the wallet up once in a terminal (`init`, `keychain on`, `limits`, then fund the address; see [Install](#install)), then reconnect `wafermap` with `/mcp`. `/wafermap:setup` checks each step without touching the password. The plugin files are in [`plugin/`](plugin); the marketplace is [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json).
 
+## Codex plugin
+
+```bash
+codex plugin marketplace add wafermap/wafermap-cli
+codex plugin add wafermap@wafermap
+```
+
+It is the same plugin as for Claude Code: the remote catalog (`wafermap-catalog`), the local wallet server (`wafermap`) and the skill. The wallet setup is the same too: `init`, `keychain on`, `limits`, then fund the address. Start a new Codex session afterwards so the `wafermap` server connects. The Codex manifest is [`plugin/plugin.json`](plugin/plugin.json) and the marketplace is [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json).
+
 ## MCP server
 
 Give Claude Desktop, Cursor or any MCP client the same wallet. First put the wallet password in your operating system's keychain, once, in a terminal:

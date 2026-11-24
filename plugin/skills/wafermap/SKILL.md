@@ -39,8 +39,8 @@ npx -y @wafermapxyz/cli@0.4 limits --per-payment 0.1 --per-day 1
 npx -y @wafermapxyz/cli@0.4 address
 ```
 
-Next, they send a few dollars of USDC to the address shown (Base, Arbitrum, Polygon, or Solana for the Solana address) or USDG on Robinhood Chain. Payments are gasless. Then they run `/mcp` in Claude Code to reconnect the `wafermap` server.
+Next, they send a few dollars of USDC to the address shown (Base, Arbitrum, Polygon, or Solana for the Solana address) or USDG on Robinhood Chain. Payments are gasless. Then they reconnect the `wafermap` server: `/mcp` in Claude Code, or start a new session in Codex.
 
-To approve every payment by hand, they can run `npx -y @wafermapxyz/cli@0.4 limits --mcp-confirm on`, then reconnect.
+To approve every payment by hand, they can run `npx -y @wafermapxyz/cli@0.4 limits --mcp-confirm on`, then reconnect. This needs a client that can show MCP approval prompts; without one, payments are refused, never made silently.
 
-Docs: https://wafermap.xyz/docs#claude-code
+Docs: https://wafermap.xyz/docs#claude-code (Claude Code), https://wafermap.xyz/docs#codex (Codex)
