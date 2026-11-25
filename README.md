@@ -64,7 +64,7 @@ It is the same plugin as for Claude Code: the remote catalog (`wafermap-catalog`
 
 ## Cursor plugin
 
-The same plugin has a Cursor manifest, [`plugin/.cursor-plugin/plugin.json`](plugin/.cursor-plugin/plugin.json), and this repository is a Cursor marketplace ([`.cursor-plugin/marketplace.json`](.cursor-plugin/marketplace.json)). Until it is listed in the Cursor Marketplace, install it as a local plugin:
+The same plugin has a Cursor manifest, [`plugin/.cursor-plugin/plugin.json`](plugin/.cursor-plugin/plugin.json), and this repository is a Cursor marketplace ([`.cursor-plugin/marketplace.json`](.cursor-plugin/marketplace.json)). It is listed on [cursor.directory](https://cursor.directory/plugins/wafermap), where each MCP server has an Add to Cursor button. Until it is in the Cursor Marketplace, you can also install the whole plugin locally:
 
 ```bash
 git clone https://github.com/wafermap/wafermap-cli
