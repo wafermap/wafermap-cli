@@ -1,5 +1,9 @@
 # Changelog
 
+## Skill (25 Nov 2026)
+
+- `npx skills add wafermap/wafermap-cli` installs the `wafermap` skill on its own; the same file is served at https://wafermap.xyz/skill.md. The skill now says how to add the two MCP servers in Claude Code, Codex and Cursor when they are missing, and that `wafermap resources` reads the catalog without a wallet.
+
 ## Cursor plugin (25 Nov 2026)
 
 - The plugin also has a Cursor manifest (`plugin/.cursor-plugin/plugin.json`, marketplace `.cursor-plugin/marketplace.json`). Cursor's MCP config is `plugin/cursor/mcp.json`, with the same catalog and wallet server. `/wafermap:setup` now has a `name` in its frontmatter. Plugin 0.1.2; the CLI is unchanged.

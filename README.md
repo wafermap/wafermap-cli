@@ -74,6 +74,14 @@ cp -R wafermap-cli/plugin ~/.cursor/plugins/local/wafermap
 
 Then run Developer: Reload Window. Cursor reads its MCP servers from [`plugin/cursor/mcp.json`](plugin/cursor/mcp.json): the same catalog and local wallet server. The wallet setup is the same as above.
 
+## Skill only
+
+```bash
+npx skills add wafermap/wafermap-cli
+```
+
+Installs the `wafermap` skill into Claude Code, Codex, Cursor and the other agents the [skills CLI](https://www.npmjs.com/package/skills) supports. The same file is at https://wafermap.xyz/skill.md for agents that read a URL. The skill tells the agent how to add the two MCP servers (after asking you) and walks you through the wallet setup.
+
 ## MCP server
 
 Give Claude Desktop, Cursor or any MCP client the same wallet. First put the wallet password in your operating system's keychain, once, in a terminal:

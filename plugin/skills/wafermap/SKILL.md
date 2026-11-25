@@ -12,6 +12,16 @@ Wafermap gives you an x402 wallet. It pays per call in USDG on Robinhood Chain, 
 - `wafermap-catalog` (remote, https://wafermap.xyz/mcp) needs no setup. Use it to browse resources and read their input schemas. It cannot pay.
 - `wafermap` (local, `npx @wafermapxyz/cli mcp`) is the wallet. It pays within the caps the user set. If it is not connected, the wallet is not set up yet: follow **Setup** below.
 
+## If the servers are missing
+
+Installed as a skill only (`npx skills add wafermap/wafermap-cli`, or this file read from https://wafermap.xyz/skill.md), the two servers are not there yet. Ask the user before changing their MCP config, then add them:
+
+- Claude Code: `claude mcp add --transport http wafermap-catalog https://wafermap.xyz/mcp` and `claude mcp add wafermap -- npx -y @wafermapxyz/cli@0.4 mcp`
+- Codex: `codex mcp add wafermap-catalog --url https://wafermap.xyz/mcp` and `codex mcp add wafermap -- npx -y @wafermapxyz/cli@0.4 mcp`
+- Cursor or any other client: `{"mcpServers":{"wafermap-catalog":{"url":"https://wafermap.xyz/mcp"},"wafermap":{"command":"npx","args":["-y","@wafermapxyz/cli@0.4","mcp"]}}}`
+
+Without any server you can still read the catalog and prices: `npx -y @wafermapxyz/cli@0.4 resources <words>` needs no wallet. Paying needs the `wafermap` server and the **Setup** below.
+
 ## Flow
 
 1. Find the resource: `wafermap_resources` (optionally with `query` or `category`). For anything outside Wafermap's catalog, use `wafermap_discover` (third-party x402 services).
@@ -43,4 +53,4 @@ Next, they send a few dollars of USDC to the address shown (Base, Arbitrum, Poly
 
 To approve every payment by hand, they can run `npx -y @wafermapxyz/cli@0.4 limits --mcp-confirm on`, then reconnect. This needs a client that can show MCP approval prompts; without one, payments are refused, never made silently.
 
-Docs: https://wafermap.xyz/docs#claude-code (Claude Code), https://wafermap.xyz/docs#codex (Codex), https://wafermap.xyz/docs#cursor (Cursor)
+Docs: https://wafermap.xyz/docs#skill (skill only), https://wafermap.xyz/docs#claude-code (Claude Code), https://wafermap.xyz/docs#codex (Codex), https://wafermap.xyz/docs#cursor (Cursor)
