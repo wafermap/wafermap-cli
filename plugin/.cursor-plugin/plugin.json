@@ -1,0 +1,18 @@
+{
+  "name": "wafermap",
+  "displayName": "Wafermap",
+  "version": "0.1.2",
+  "description": "Give your agent an x402 wallet with spending caps: find and pay Wafermap's pay-per-call resources and third-party x402 services, with a receipt and a transaction for every payment.",
+  "author": {
+    "name": "Wafermap",
+    "email": "hello@wafermap.xyz"
+  },
+  "homepage": "https://wafermap.xyz/docs#cursor",
+  "repository": "https://github.com/wafermap/wafermap-cli",
+  "license": "MIT",
+  "keywords": ["x402", "payments", "mcp", "agents", "usdc", "robinhood-chain", "base", "solana"],
+  "logo": "assets/logo.png",
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "mcpServers": "./cursor/mcp.json"
+}

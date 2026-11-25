@@ -1,5 +1,9 @@
 # Changelog
 
+## Cursor plugin (25 Nov 2026)
+
+- The plugin also has a Cursor manifest (`plugin/.cursor-plugin/plugin.json`, marketplace `.cursor-plugin/marketplace.json`). Cursor's MCP config is `plugin/cursor/mcp.json`, with the same catalog and wallet server. `/wafermap:setup` now has a `name` in its frontmatter. Plugin 0.1.2; the CLI is unchanged.
+
 ## Codex plugin (24 Nov 2026)
 
 - The plugin also installs in Codex: `codex plugin marketplace add wafermap/wafermap-cli`, then `codex plugin add wafermap@wafermap`. It adds the same catalog, wallet server and skill. Plugin 0.1.1; the CLI is unchanged.

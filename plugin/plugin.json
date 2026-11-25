@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "wafermap",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Give your agent an x402 wallet with spending caps: find and pay Wafermap's pay-per-call resources (LLMs, image and audio models, web reading, on-chain data, tokenized stocks, prediction markets) and third-party x402 services, with a receipt and a transaction for every payment. The key and the caps stay on your machine.",
   "author": {
     "name": "Wafermap",

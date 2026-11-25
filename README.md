@@ -62,6 +62,18 @@ codex plugin add wafermap@wafermap
 
 It is the same plugin as for Claude Code: the remote catalog (`wafermap-catalog`), the local wallet server (`wafermap`) and the skill. The wallet setup is the same too: `init`, `keychain on`, `limits`, then fund the address. Start a new Codex session afterwards so the `wafermap` server connects. The Codex manifest is [`plugin/plugin.json`](plugin/plugin.json) and the marketplace is [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json).
 
+## Cursor plugin
+
+The same plugin has a Cursor manifest, [`plugin/.cursor-plugin/plugin.json`](plugin/.cursor-plugin/plugin.json), and this repository is a Cursor marketplace ([`.cursor-plugin/marketplace.json`](.cursor-plugin/marketplace.json)). Until it is listed in the Cursor Marketplace, install it as a local plugin:
+
+```bash
+git clone https://github.com/wafermap/wafermap-cli
+mkdir -p ~/.cursor/plugins/local
+cp -R wafermap-cli/plugin ~/.cursor/plugins/local/wafermap
+```
+
+Then run Developer: Reload Window. Cursor reads its MCP servers from [`plugin/cursor/mcp.json`](plugin/cursor/mcp.json): the same catalog and local wallet server. The wallet setup is the same as above.
+
 ## MCP server
 
 Give Claude Desktop, Cursor or any MCP client the same wallet. First put the wallet password in your operating system's keychain, once, in a terminal:

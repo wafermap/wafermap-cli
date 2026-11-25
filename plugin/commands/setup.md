@@ -1,4 +1,5 @@
 ---
+name: setup
 description: Check the Wafermap wallet and walk through setup
 ---
 

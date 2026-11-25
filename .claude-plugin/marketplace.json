@@ -9,7 +9,7 @@
       "name": "wafermap",
       "source": "./plugin",
       "description": "Give Claude an x402 wallet with spending caps: find and pay Wafermap's pay-per-call resources and third-party x402 services, with a receipt and a transaction for every payment.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": { "name": "Wafermap", "email": "hello@wafermap.xyz" },
       "homepage": "https://wafermap.xyz/docs#claude-code",
       "repository": "https://github.com/wafermap/wafermap-cli",
