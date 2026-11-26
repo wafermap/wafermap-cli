@@ -1,13 +1,13 @@
 ---
 name: setup
-description: Check the Wafermap wallet and walk through setup
+description: Walk through setting up the Wafermap wallet (the user runs every command)
 ---
 
-Check whether the Wafermap wallet is ready, without asking for or handling the password.
+Help the user set up the Wafermap wallet. Do not run any of these commands yourself: show them, and the user runs them in their own terminal. Never ask for or handle the wallet password.
 
-1. Run `npx -y @wafermapxyz/cli@0.4 address`. If it says there is no wallet, give the user the setup commands from the wafermap skill and stop. They must run `init` themselves, because it asks for a password.
-2. Run `npx -y @wafermapxyz/cli@0.4 keychain`. If the password is not in the keychain, ask the user to run `npx -y @wafermapxyz/cli@0.4 keychain on` in their terminal.
-3. Run `npx -y @wafermapxyz/cli@0.4 balance`. If every balance is zero, show the addresses to fund.
-4. If the local `wafermap` MCP server is connected, call `wafermap_wallet` and report the caps and today's spend. Otherwise ask the user to run `/mcp` and reconnect `wafermap`.
+1. Wallet: `npx -y @wafermapxyz/cli@0.4 init` (asks for a password), then `npx -y @wafermapxyz/cli@0.4 keychain on`.
+2. Caps: `npx -y @wafermapxyz/cli@0.4 limits --per-payment 0.1 --per-day 1`.
+3. Funding: `npx -y @wafermapxyz/cli@0.4 address` shows where to send a few dollars of USDC (Base, Arbitrum, Polygon or Solana) or USDG on Robinhood Chain.
+4. Connect the wallet to Claude Code: `claude mcp add wafermap -- npx -y @wafermapxyz/cli@0.4 mcp`, then `/mcp`.
 
-End with one line: ready, or the single next step.
+The catalog in this plugin (`wafermap-catalog`) works without any of this. End with the single next step for the user.

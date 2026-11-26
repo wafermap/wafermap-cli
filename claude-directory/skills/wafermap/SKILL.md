@@ -7,26 +7,16 @@ description: Pay per call for data and AI with the Wafermap x402 wallet. Use whe
 
 Wafermap gives you an x402 wallet. It pays per call in USDG on Robinhood Chain, or in USDC on Solana, Base, Arbitrum, Polygon, Arc or Soneium. The key and the spending caps stay on the user's machine. Every paid call returns a receipt with a transaction hash.
 
-## Two MCP servers
+## What this plugin connects
 
-- `wafermap-catalog` (remote, https://wafermap.xyz/mcp) needs no setup. Use it to browse resources and read their input schemas. It cannot pay.
-- `wafermap` (local, `npx @wafermapxyz/cli mcp`) is the wallet. It pays within the caps the user set. If it is not connected, the wallet is not set up yet: follow **Setup** below.
-
-## If the servers are missing
-
-Installed as a skill only (`npx skills add wafermap/wafermap-cli`, or this file read from https://wafermap.xyz/skill.md), the two servers are not there yet. Ask the user before changing their MCP config, then add them:
-
-- Claude Code: `claude mcp add --transport http wafermap-catalog https://wafermap.xyz/mcp` and `claude mcp add wafermap -- npx -y @wafermapxyz/cli@0.4 mcp`
-- Codex: `codex mcp add wafermap-catalog --url https://wafermap.xyz/mcp` and `codex mcp add wafermap -- npx -y @wafermapxyz/cli@0.4 mcp`
-- Cursor or any other client: `{"mcpServers":{"wafermap-catalog":{"url":"https://wafermap.xyz/mcp"},"wafermap":{"command":"npx","args":["-y","@wafermapxyz/cli@0.4","mcp"]}}}`
-
-Without any server you can still read the catalog and prices: `npx -y @wafermapxyz/cli@0.4 resources <words>` needs no wallet. Paying needs the `wafermap` server and the **Setup** below.
+- `wafermap-catalog` (remote, https://wafermap.xyz/mcp) needs no setup. Use it to browse resources, read their input schemas and find third-party x402 services. It cannot pay.
+- Paying needs the Wafermap wallet, which runs on the user's machine (`wafermap` MCP server from `@wafermapxyz/cli`). This plugin does not install or run it. If the user wants to pay, show them **Setup** below and let them run every command themselves. Do not run these commands, and do not change their MCP config yourself.
 
 ## Flow
 
 1. Find the resource: `wafermap_resources` (optionally with `query` or `category`). For anything outside Wafermap's catalog, use `wafermap_discover` (third-party x402 services).
 2. Read its input: `wafermap_resource_schema` on `wafermap-catalog`. The input is validated before any payment.
-3. Run it with `wafermap_call` on the local `wafermap` server, or `wafermap_pay` for a third-party x402 URL.
+3. If the user has connected the `wafermap` wallet server, run it with `wafermap_call`, or `wafermap_pay` for a third-party x402 URL. If not, tell them the price and point them to **Setup**.
 4. Tell the user what it cost and give them the transaction hash from the receipt.
 
 ## Rules
@@ -40,7 +30,7 @@ Without any server you can still read the catalog and prices: `npx -y @wafermapx
 
 ## Setup
 
-The user runs these commands in their own terminal, because they type the password themselves:
+The user runs these commands in their own terminal (you only show them), because they type the password themselves:
 
 ```bash
 npx -y @wafermapxyz/cli@0.4 init
@@ -49,7 +39,7 @@ npx -y @wafermapxyz/cli@0.4 limits --per-payment 0.1 --per-day 1
 npx -y @wafermapxyz/cli@0.4 address
 ```
 
-Next, they send a few dollars of USDC to the address shown (Base, Arbitrum, Polygon, or Solana for the Solana address) or USDG on Robinhood Chain. Payments are gasless. Then they reconnect the `wafermap` server: `/mcp` in Claude Code, a new session in Codex, or Developer: Reload Window in Cursor.
+Next, they send a few dollars of USDC to the address shown (Base, Arbitrum, Polygon, or Solana for the Solana address) or USDG on Robinhood Chain. Payments are gasless. Then they connect the wallet: `claude mcp add wafermap -- npx -y @wafermapxyz/cli@0.4 mcp`, then `/mcp`.
 
 To approve every payment by hand, they can run `npx -y @wafermapxyz/cli@0.4 limits --mcp-confirm on`, then reconnect. This needs a client that can show MCP approval prompts; without one, payments are refused, never made silently.
 
