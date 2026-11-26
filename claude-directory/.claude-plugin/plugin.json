@@ -1,0 +1,11 @@
+{
+  "name": "wafermap",
+  "version": "0.1.0",
+  "description": "Browse Wafermap's pay-per-call x402 catalog from Claude: resources, prices and input schemas, plus third-party x402 services. Pair it with the Wafermap wallet to pay per call within caps you set.",
+  "author": { "name": "Wafermap", "email": "hello@wafermap.xyz", "url": "https://wafermap.xyz" },
+  "homepage": "https://wafermap.xyz/docs#claude-code",
+  "repository": "https://github.com/wafermap/wafermap-cli",
+  "privacyPolicyUrl": "https://wafermap.xyz/privacy",
+  "license": "MIT",
+  "keywords": ["x402", "payments", "mcp", "agents", "usdc", "robinhood-chain", "base", "solana"]
+}
