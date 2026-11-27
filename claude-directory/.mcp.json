@@ -2,7 +2,7 @@
   "mcpServers": {
     "wafermap-catalog": {
       "type": "http",
-      "url": "https://wafermap.xyz/mcp"
+      "url": "https://wafermap.xyz/mcp/catalog"
     }
   }
 }
